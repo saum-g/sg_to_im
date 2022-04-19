@@ -76,6 +76,7 @@ def masks_to_layout(vecs, boxes, masks, obj_to_img, H, W=None, pooling='sum'):
   Returns:
   - out: Tensor of shape (N, D, H, W)
   """
+  
   O, D = vecs.size()
   M = masks.size(1)
   assert masks.size() == (O, M, M)
