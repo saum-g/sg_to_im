@@ -19,14 +19,17 @@ import argparse, json, os
 from imageio import imwrite
 import torch
 
+import sys
+sys.path.append('../')
+
 from sg2im.model import Sg2ImModel
 from sg2im.data.utils import imagenet_deprocess_batch
 import sg2im.vis as vis
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--checkpoint', default='sg2im-models/vg128.pt')
-parser.add_argument('--scene_graphs_json', default='scene_graphs/figure_6_sheep.json')
+parser.add_argument('--checkpoint', default='../sg2im-models/coco/coco64.pt')
+parser.add_argument('--scene_graphs_json', default='../scene_graphs/figure_5_coco.json')
 parser.add_argument('--output_dir', default='outputs')
 parser.add_argument('--draw_scene_graphs', type=int, default=0)
 parser.add_argument('--device', default='gpu', choices=['cpu', 'gpu'])
@@ -51,6 +54,7 @@ def main(args):
       print('WARNING: CUDA not available; falling back to CPU')
       device = torch.device('cpu')
 
+  device = torch.device('cpu')
   # Load the model, with a bit of care in case there are no GPUs
   map_location = 'cpu' if device == torch.device('cpu') else None
   checkpoint = torch.load(args.checkpoint, map_location=map_location)
@@ -65,12 +69,15 @@ def main(args):
 
   # Run the model forward
   with torch.no_grad():
-    imgs, boxes_pred, masks_pred, _ = model.forward_json(scene_graphs)
-  imgs = imagenet_deprocess_batch(imgs)
+    layout = model.forward_json(scene_graphs)
+  print(type(layout))
+  print(layout.shape)
+
+  # imgs = imagenet_deprocess_batch(imgs)
 
   # Save the generated images
-  for i in range(imgs.shape[0]):
-    img_np = imgs[i].numpy().transpose(1, 2, 0)
+  for i in range(layout.shape[0]):
+    img_np = layout[i].numpy().transpose(1, 2, 0)
     img_path = os.path.join(args.output_dir, 'img%06d.png' % i)
     imwrite(img_path, img_np)
 
