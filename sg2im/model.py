@@ -85,12 +85,12 @@ class Sg2ImModel(nn.Module):
     self.rel_aux_net = build_mlp(rel_aux_layers, batch_norm=mlp_normalization)
 
     ## will replace with SPADE later
-    # refinement_kwargs = {
-    #   'dims': (gconv_dim + layout_noise_dim,) + refinement_dims,
-    #   'normalization': normalization,
-    #   'activation': activation,
-    # }
-    # self.refinement_net = RefinementNetwork(**refinement_kwargs)
+    refinement_kwargs = {
+      'dims': (gconv_dim + layout_noise_dim,) + refinement_dims,
+      'normalization': normalization,
+      'activation': activation,
+    }
+    self.refinement_net = RefinementNetwork(**refinement_kwargs)
 
   def _build_mask_net(self, num_objs, dim, mask_size):
     output_dim = 1
@@ -162,18 +162,17 @@ class Sg2ImModel(nn.Module):
       layout = boxes_to_layout(unit_obj_vecs, layout_boxes, obj_to_img, H, W)
     else:
       layout_masks = masks_pred if masks_gt is None else masks_gt
-      layout = masks_to_layout(unit_obj_vecs, layout_boxes, layout_masks,
+      layout = masks_to_layout(objs, unit_obj_vecs, layout_boxes, layout_masks,
                                obj_to_img, H, W)
 
-    if self.layout_noise_dim > 0:
-      N, C, H, W = layout.size()
-      noise_shape = (N, self.layout_noise_dim, H, W)
-      layout_noise = torch.randn(noise_shape, dtype=layout.dtype,
-                                 device=layout.device)
-      layout = torch.cat([layout, layout_noise], dim=1)
+    # if self.layout_noise_dim > 0:
+    #   N, C, H, W = layout.size()
+    #   noise_shape = (N, self.layout_noise_dim, H, W)
+    #   layout_noise = torch.randn(noise_shape, dtype=layout.dtype,
+    #                              device=layout.device)
+    #   layout = torch.cat([layout, layout_noise], dim=1)
 
-    # do further processing with layout
-    pass
+    return layout
 
     # img = self.refinement_net(layout)
     # return img, boxes_pred, masks_pred, rel_scores

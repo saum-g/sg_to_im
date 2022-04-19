@@ -17,6 +17,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+from imageio import imwrite
 from sg2im.utils import timeit, get_gpu_memory, lineno
 
 
@@ -46,7 +48,6 @@ def boxes_to_layout(vecs, boxes, obj_to_img, H, W=None, pooling='sum'):
     W = H
 
   grid = _boxes_to_grid(boxes, H, W)
-
   # If we don't add extra spatial dimensions here then out-of-bounds
   # elements won't be automatically set to 0
   img_in = vecs.view(O, D, 1, 1).expand(O, D, 8, 8)
@@ -63,32 +64,45 @@ def boxes_to_layout(vecs, boxes, obj_to_img, H, W=None, pooling='sum'):
   return out
 
 
-def masks_to_layout(vecs, boxes, masks, obj_to_img, H, W=None, pooling='sum'):
+def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0.2, pooling='sum'):
   """
   Inputs:
+  - objs: Tensor of shape (O,) containing the object category labels
   - vecs: Tensor of shape (O, D) giving vectors
   - boxes: Tensor of shape (O, 4) giving bounding boxes in the format
     [x0, y0, x1, y1] in the [0, 1] coordinate space
   - masks: Tensor of shape (O, M, M) giving binary masks for each object
   - obj_to_img: LongTensor of shape (O,) mapping objects to images
   - H, W: Size of the output image.
+  - threshold: Values equal or above threshold in the generated mask are
+    assigned the corresponding object label(/ 255.0) and those below threshold are made 0
 
   Returns:
   - out: Tensor of shape (N, D, H, W)
   """
   
   O, D = vecs.size()
+  print("Number of objects: {}".format(O))
   M = masks.size(1)
   assert masks.size() == (O, M, M)
   if W is None:
     W = H
 
   grid = _boxes_to_grid(boxes, H, W)
-
   img_in = vecs.view(O, D, 1, 1) * masks.float().view(O, 1, M, M)
   sampled = F.grid_sample(img_in, grid)
+  #sampled represents the stretched image masks for each object. (O, 1, 64, 64)
+
+  for i in range(O):
+    sampled[i][sampled[i] < threshold] = 0.0
+    sampled[i][sampled[i] >= threshold] = objs[i].type(torch.FloatTensor)/255.0
+    sam_im = sampled[i].numpy().squeeze()
+    imwrite('./outputs/sampled{}.png'.format(i), sam_im)
 
   out = _pool_samples(sampled, obj_to_img, pooling=pooling)
+  # for i in range(8):
+  #   out_im = out[i].numpy().squeeze()
+  #   imwrite('out{}.png'.format(i), out_im)
   return out
 
 

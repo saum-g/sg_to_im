@@ -1,2 +1,6 @@
 .DS_Store
 __pycache__
+scripts/datasets
+datasets
+sg2im-models/coco/coco64.pt
+sg2im-models
