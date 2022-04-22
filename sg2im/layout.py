@@ -92,22 +92,26 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   grid = _boxes_to_grid(boxes, H, W)
   img_in = vecs.view(O, D, 1, 1) * masks.float().view(O, 1, M, M)
   sampled = F.grid_sample(img_in, grid)
+  print(sampled[0].numpy().squeeze())
   instances = F.grid_sample(img_in, grid)
   #sampled represents the stretched image masks for each object. (O, 1, 64, 64)
 
   for i in range(O):
+    sam_im = sampled[i].numpy().squeeze()
+    imwrite('./outputs/sampled{}_{}.png'.format(i, objs[i]), sam_im)
     sampled[i][sampled[i] < threshold] = 0.0
     sampled[i][sampled[i] >= threshold] = objs[i].type(torch.FloatTensor)/255.0
+    sampled[sampled == 0.0] = 1.0
     instances[i][instances[i] < threshold] = 0.0
     instances[i][instances[i] >= threshold] = i/255.0
-    sam_im = sampled[i].numpy().squeeze()
-    imwrite('./outputs/sampled{}.png'.format(i), sam_im)
     # inst_im = instances[i].numpy().squeeze()
     # imwrite('./outputs/instance{}.png'.format(i), inst_im)
 
   out = _pool_samples(sampled, obj_to_img, pooling=pooling)
+  # out[out == 1] = 0
   inst_out = _pool_samples(instances, obj_to_img, pooling=pooling)
-  print(out[0].numpy().squeeze()*255)
+  print(list(sampled[0].numpy().squeeze()))
+  print(list(out[0].numpy().squeeze()*255))
 
   for i in range(8):
     out_ins = inst_out[i].numpy().squeeze()
@@ -173,7 +177,7 @@ def _pool_samples(samples, obj_to_img, pooling='sum'):
   out = torch.zeros(N, D, H, W, dtype=dtype, device=device)
   idx = obj_to_img.view(O, 1, 1, 1).expand(O, D, H, W)
   # out = out.scatter_add(0, idx,samples)
-  out, _ = torch_scatter.scatter_max(samples, idx,0)
+  out, _ = torch_scatter.scatter_min(samples, idx,0)
 
   if pooling == 'avg':
     # Divide each output mask by the number of objects; use scatter_add again
