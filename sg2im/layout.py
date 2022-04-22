@@ -64,7 +64,7 @@ def boxes_to_layout(vecs, boxes, obj_to_img, H, W=None, pooling='sum'):
   return out
 
 
-def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0.2, pooling='sum'):
+def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0.5, pooling='sum'):
   """
   Inputs:
   - objs: Tensor of shape (O,) containing the object category labels
@@ -97,20 +97,25 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   #sampled represents the stretched image masks for each object. (O, 1, 64, 64)
 
   for i in range(O):
-    sam_im = sampled[i].numpy().squeeze()
-    imwrite('./outputs/sampled{}_{}.png'.format(i, objs[i]), sam_im)
+    # sam_im = sampled[i].numpy().squeeze()
+    # imwrite('./outputs/sampled{}_{}.png'.format(i, objs[i]), sam_im)
     sampled[i][sampled[i] < threshold] = 0.0
     sampled[i][sampled[i] >= threshold] = objs[i].type(torch.FloatTensor)/255.0
-    sampled[sampled == 0.0] = 1.0
+    sampled[i][sampled[i] == 0] = 1.0
+    # sampled[sampled == 0.0] = 1.0
     instances[i][instances[i] < threshold] = 0.0
     instances[i][instances[i] >= threshold] = i/255.0
+    instances[i][instances[i] == 0] = 1.0
     # inst_im = instances[i].numpy().squeeze()
     # imwrite('./outputs/instance{}.png'.format(i), inst_im)
 
+  # for i in range(8):
+  #   print(list(sampled[i].numpy().squeeze()))
+
   out = _pool_samples(sampled, obj_to_img, pooling=pooling)
-  # out[out == 1] = 0
+  out[out == 1] = 0
   inst_out = _pool_samples(instances, obj_to_img, pooling=pooling)
-  print(list(sampled[0].numpy().squeeze()))
+  inst_out[inst_out == 1] = 0
   print(list(out[0].numpy().squeeze()*255))
 
   for i in range(8):
@@ -177,7 +182,7 @@ def _pool_samples(samples, obj_to_img, pooling='sum'):
   out = torch.zeros(N, D, H, W, dtype=dtype, device=device)
   idx = obj_to_img.view(O, 1, 1, 1).expand(O, D, H, W)
   # out = out.scatter_add(0, idx,samples)
-  out, _ = torch_scatter.scatter_min(samples, idx,0)
+  out, _ = torch_scatter.scatter_min(samples, idx, 0)
 
   if pooling == 'avg':
     # Divide each output mask by the number of objects; use scatter_add again
