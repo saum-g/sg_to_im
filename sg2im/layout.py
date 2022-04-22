@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import numpy as np
 from imageio import imwrite
 from sg2im.utils import timeit, get_gpu_memory, lineno
-
+import torch_scatter
 
 """
 Functions for computing image layouts from object vectors, bounding boxes,
@@ -83,6 +83,7 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   
   O, D = vecs.size()
   print("Number of objects: {}".format(O))
+  print(obj_to_img)
   M = masks.size(1)
   assert masks.size() == (O, M, M)
   if W is None:
@@ -91,18 +92,29 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   grid = _boxes_to_grid(boxes, H, W)
   img_in = vecs.view(O, D, 1, 1) * masks.float().view(O, 1, M, M)
   sampled = F.grid_sample(img_in, grid)
+  instances = F.grid_sample(img_in, grid)
   #sampled represents the stretched image masks for each object. (O, 1, 64, 64)
 
   for i in range(O):
     sampled[i][sampled[i] < threshold] = 0.0
     sampled[i][sampled[i] >= threshold] = objs[i].type(torch.FloatTensor)/255.0
+    instances[i][instances[i] < threshold] = 0.0
+    instances[i][instances[i] >= threshold] = i/255.0
     sam_im = sampled[i].numpy().squeeze()
     imwrite('./outputs/sampled{}.png'.format(i), sam_im)
+    # inst_im = instances[i].numpy().squeeze()
+    # imwrite('./outputs/instance{}.png'.format(i), inst_im)
 
   out = _pool_samples(sampled, obj_to_img, pooling=pooling)
-  # for i in range(8):
-  #   out_im = out[i].numpy().squeeze()
-  #   imwrite('out{}.png'.format(i), out_im)
+  inst_out = _pool_samples(instances, obj_to_img, pooling=pooling)
+  print(out[0].numpy().squeeze()*255)
+
+  for i in range(8):
+    out_ins = inst_out[i].numpy().squeeze()
+    imwrite('./outputs/val_inst/img{}.png'.format(i), out_ins)
+    imwrite('./outputs/val_img/img{}.png'.format(i), out_ins)
+    out_img = out[i].numpy().squeeze()
+    imwrite('./outputs/val_label/img{}.png'.format(i), out_img)
   return out
 
 
@@ -160,7 +172,8 @@ def _pool_samples(samples, obj_to_img, pooling='sum'):
   # Use scatter_add to sum the sampled outputs for each image
   out = torch.zeros(N, D, H, W, dtype=dtype, device=device)
   idx = obj_to_img.view(O, 1, 1, 1).expand(O, D, H, W)
-  out = out.scatter_add(0, idx, samples)
+  # out = out.scatter_add(0, idx,samples)
+  out, _ = torch_scatter.scatter_max(samples, idx,0)
 
   if pooling == 'avg':
     # Divide each output mask by the number of objects; use scatter_add again
