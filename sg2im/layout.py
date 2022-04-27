@@ -80,6 +80,30 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   Returns:
   - out: Tensor of shape (N, D, H, W)
   """
+
+  ## sort objs for each image in order of increasing id to have consistent labels
+  ## assume that all objects of an image are together
+  print("earlier objs:", objs.tolist())
+  print("obj_to_img:", obj_to_img.tolist())
+
+  new_objs = []
+  num_imgs = torch.max(obj_to_img)
+  num_imgs += 1
+
+  for i in range(num_imgs):
+    new_objs.append([])
+
+  for obj_id, img_id in enumerate(obj_to_img.tolist()):
+    new_objs[img_id].append(objs[obj_id])
+
+  for i in range(num_imgs):
+    new_objs[i].sort()
+
+  flat_objs = [obj for obj_list in new_objs for obj in obj_list]
+
+  objs = torch.Tensor(flat_objs)
+
+  print("new objs:", objs.tolist())
   
   O, D = vecs.size()
   print("Number of objects: {}".format(O))
@@ -104,7 +128,7 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
     sampled[i][sampled[i] < 0] = 1.0
     # sampled[sampled == 0.0] = 1.0
     instances[i][instances[i] < threshold] = 0.0
-    instances[i][instances[i] >= threshold] = i/255.0
+    instances[i][instances[i] >= threshold] = (i + 1)/255.0
     instances[i][instances[i] == 0] = 1.0
     # inst_im = instances[i].numpy().squeeze()
     # imwrite('./outputs/instance{}.png'.format(i), inst_im)
@@ -116,7 +140,7 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   out[out == 1] = 182/255
   inst_out = _pool_samples(instances, obj_to_img, pooling=pooling)
   inst_out[inst_out == 1] = 0
-  print(list(out[0].numpy().squeeze()*255))
+  print(list(out[3].numpy().squeeze()*255))
 
   for i in range(8):
     out_ins = inst_out[i].numpy().squeeze()
