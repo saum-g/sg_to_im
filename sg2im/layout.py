@@ -99,9 +99,9 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   for i in range(O):
     # sam_im = sampled[i].numpy().squeeze()
     # imwrite('./outputs/sampled{}_{}.png'.format(i, objs[i]), sam_im)
-    sampled[i][sampled[i] < threshold] = 0.0
-    sampled[i][sampled[i] >= threshold] = objs[i].type(torch.FloatTensor)/255.0
-    sampled[i][sampled[i] == 0] = 1.0
+    sampled[i][sampled[i] < threshold] = -1.0
+    sampled[i][sampled[i] >= threshold] = (objs[i].type(torch.FloatTensor) - 1)/255.0
+    sampled[i][sampled[i] < 0] = 1.0
     # sampled[sampled == 0.0] = 1.0
     instances[i][instances[i] < threshold] = 0.0
     instances[i][instances[i] >= threshold] = i/255.0
@@ -113,7 +113,7 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   #   print(list(sampled[i].numpy().squeeze()))
 
   out = _pool_samples(sampled, obj_to_img, pooling=pooling)
-  out[out == 1] = 0
+  out[out == 1] = 182/255
   inst_out = _pool_samples(instances, obj_to_img, pooling=pooling)
   inst_out[inst_out == 1] = 0
   print(list(out[0].numpy().squeeze()*255))
