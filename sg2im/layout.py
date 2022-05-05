@@ -81,29 +81,29 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   - out: Tensor of shape (N, D, H, W)
   """
 
-  ## sort objs for each image in order of increasing id to have consistent labels
-  ## assume that all objects of an image are together
-  print("earlier objs:", objs.tolist())
-  print("obj_to_img:", obj_to_img.tolist())
-
-  new_objs = []
-  num_imgs = torch.max(obj_to_img)
-  num_imgs += 1
-
-  for i in range(num_imgs):
-    new_objs.append([])
-
-  for obj_id, img_id in enumerate(obj_to_img.tolist()):
-    new_objs[img_id].append(objs[obj_id])
-
-  for i in range(num_imgs):
-    new_objs[i].sort()
-
-  flat_objs = [obj for obj_list in new_objs for obj in obj_list]
-
-  objs = torch.Tensor(flat_objs)
-
-  print("new objs:", objs.tolist())
+  # ## sort objs for each image in order of increasing id to have consistent labels
+  # ## assume that all objects of an image are together
+  # print("earlier objs:", objs.tolist())
+  # print("obj_to_img:", obj_to_img.tolist())
+  #
+  # new_objs = []
+  # num_imgs = torch.max(obj_to_img)
+  # num_imgs += 1
+  #
+  # for i in range(num_imgs):
+  #   new_objs.append([])
+  #
+  # for obj_id, img_id in enumerate(obj_to_img.tolist()):
+  #   new_objs[img_id].append(objs[obj_id])
+  #
+  # for i in range(num_imgs):
+  #   new_objs[i].sort()
+  #
+  # flat_objs = [obj for obj_list in new_objs for obj in obj_list]
+  #
+  # objs = torch.Tensor(flat_objs)
+  #
+  # print("new objs:", objs.tolist())
   
   O, D = vecs.size()
   print("Number of objects: {}".format(O))
@@ -142,7 +142,7 @@ def masks_to_layout(objs, vecs, boxes, masks, obj_to_img, H, W=None, threshold=0
   inst_out[inst_out == 1] = 0
   print(list(out[3].numpy().squeeze()*255))
 
-  for i in range(8):
+  for i in range(7):
     out_ins = inst_out[i].numpy().squeeze()
     imwrite('./outputs/val_inst/img{}.png'.format(i), out_ins)
     imwrite('./outputs/val_img/img{}.png'.format(i), out_ins)

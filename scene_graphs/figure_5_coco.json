@@ -42,15 +42,6 @@
     ]
   },
   {
-    "objects": ["person", "tie", "wall-panel", "clothes"],
-    "relationships": [
-      [0, "surrounding", 1],
-      [1, "inside", 0],
-      [1, "above", 3],
-      [2, "surrounding", 0]
-    ]
-  },
-  {
     "objects": ["clouds", "tree", "person", "horse", "grass"],
     "relationships": [
       [0, "above", 4],
