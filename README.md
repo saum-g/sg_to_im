@@ -14,6 +14,7 @@ cd scripts
 python run_model.py
 ```
 3. Creating images from layouts using SPADE
+
 **Copy/Overwrite the folders val_img, val_inst, val_label inside sg_to_im/scripts/outputs to SPADE/my_datasets**
 ```
 cd ../SPADE
