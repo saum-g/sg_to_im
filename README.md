@@ -20,3 +20,6 @@ python run_model.py
 cd ../SPADE
 python test.py --name coco_pretrained --dataset_mode coco --dataroot my_datasets --gpu_ids -1
 ```
+
+Outputs are generated under sg_to_im/SPADE/results/coco_pretrained/test_latest
+You could either open the index.html file or go inside images/syntesized_images under the aforementioned directory
